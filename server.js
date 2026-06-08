@@ -37,12 +37,7 @@ app.use(passport.initialize());
 // Static file serving for uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// React Dist Folder
-app.use(express.static(path.join(__dirname, 'dist')));
-// React Routing Support
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
+
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
