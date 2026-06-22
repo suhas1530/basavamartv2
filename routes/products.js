@@ -136,6 +136,9 @@ router.get('/admin/all', protectAdmin, async (req, res) => {
     if (category) query.category = category;
     if (subcategory) query.subcategory = subcategory;
     if (status) query.status = status;
+    if (req.query.accessLevel) {
+      query.accessLevel = req.query.accessLevel;
+    }
     if (startDate || endDate) {
       query.createdAt = {};
       if (startDate) query.createdAt.$gte = new Date(startDate);

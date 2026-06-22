@@ -6,6 +6,7 @@ const path = require('path');
 const http = require('http');
 const { Server } = require('socket.io');
 const passport = require('passport');
+const aiRoutes = require("./routes/aiRoutes");
 
 dotenv.config();
 require('./config/passport');
@@ -57,6 +58,7 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api/sites', require('./routes/sites'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/ai', require('./routes/ai'));
+app.use("/api/ai-search", aiRoutes);
 
 // Socket.io connection
 io.on('connection', (socket) => {
