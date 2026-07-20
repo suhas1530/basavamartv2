@@ -11,6 +11,8 @@ const aiRoutes = require("./routes/aiRoutes");
 dotenv.config();
 require('./config/passport');
 
+console.log('>>> SERVER FILE RUNNING FROM:', __filename);
+
 const app = express();
 const server = http.createServer(app);
 

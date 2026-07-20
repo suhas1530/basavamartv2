@@ -5,6 +5,8 @@ const Product = require('../models/Product');
 const { protectMember, protectAdmin } = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
 
+const upload = require('../middleware/basketUpload');
+
 // Helper: package breakdown
 function calcPackageBreakdown(qty, t = 0, s = 0, p = 0) {
   let remaining = qty;
@@ -17,20 +19,29 @@ function calcPackageBreakdown(qty, t = 0, s = 0, p = 0) {
 }
 
 // ===== MEMBER: Move product to basket ("Know the Price") =====
-router.post('/add', protectMember, async (req, res) => {
+router.post('/add', protectMember, upload.array('files', 7), async (req, res) => {
   try {
-    const { productId, variantId, quantity } = req.body;
+    const { productId, variantId, quantity, memberNote } = req.body;
     const product = await Product.findById(productId).populate('brand', 'name').populate('category', 'name').populate('subcategory', 'name');
     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
 
     const variant = product.variants.id(variantId);
     if (!variant) return res.status(404).json({ success: false, message: 'Variant not found' });
 
-    // Check if already in basket
+    const attachments = (req.files || []).map(f => ({
+      url: `/uploads/basket/${f.filename}`,
+      name: f.originalname,
+      fileType: f.mimetype,
+    }));
+
     const existing = await BasketItem.findOne({ member: req.member._id, product: productId, 'variant.variantId': variantId });
     if (existing) {
       existing.quantity = quantity;
+      if (memberNote) existing.memberNote = memberNote;
+      if (attachments.length) existing.attachments = [...(existing.attachments || []), ...attachments];
       await existing.save();
+      console.log('>>> LIVE — attachments caster:', BasketItem.schema.path('attachments').caster?.instance);
+      console.log('>>> LIVE — attachments about to save:', JSON.stringify(attachments));
       return res.json({ success: true, basketItem: existing });
     }
 
@@ -47,6 +58,8 @@ router.post('/add', protectMember, async (req, res) => {
       },
       variant: { variantId: variant._id, name: variant.name, unit: variant.unit, weight: variant.weight },
       quantity,
+      memberNote: memberNote || '',
+      attachments,
       orderNumber: `BM-BSKT-${req.member.memberId}-${String(orderCount + 1).padStart(3, '0')}`,
       packageBreakdown: calcPackageBreakdown(quantity, variant.tertiaryThreshold, variant.secondaryThreshold, variant.primaryThreshold),
     });
@@ -201,33 +214,28 @@ router.get('/admin/:id/vendors', protectAdmin, async (req, res) => {
 
 
 // ===== MEMBER: Update Payment Status =====
-router.patch('/:id', protectMember, async (req, res) => {
+router.patch('/:id', protectMember, upload.array('files', 7), async (req, res) => {
   try {
-    const item = await BasketItem.findOneAndUpdate(
-      {
-        _id: req.params.id,
-        member: req.member._id
-      },
-      req.body,
-      { new: true }
-    );
+    const updateData = { ...req.body };
+    const newFiles = (req.files || []).map(f => ({
+      url: `/uploads/basket/${f.filename}`,
+      name: f.originalname,
+      type: f.mimetype,
+    }));
 
-    if (!item) {
-      return res.status(404).json({
-        success: false,
-        message: 'Basket item not found'
-      });
-    }
+    const item = await BasketItem.findOne({ _id: req.params.id, member: req.member._id });
+    if (!item) return res.status(404).json({ success: false, message: 'Basket item not found' });
 
-    res.json({
-      success: true,
-      item
+    if (newFiles.length) item.attachments = [...(item.attachments || []), ...newFiles];
+    if (updateData.memberNote !== undefined) item.memberNote = updateData.memberNote;
+    ['paymentStatus', 'razorpayOrderId', 'razorpayPaymentId'].forEach(k => {
+      if (updateData[k] !== undefined) item[k] = updateData[k];
     });
+
+    await item.save();
+    res.json({ success: true, item });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message
-    });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
@@ -257,5 +265,6 @@ router.put('/admin/:id/delivery', protectAdmin, async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
 
 module.exports = router;

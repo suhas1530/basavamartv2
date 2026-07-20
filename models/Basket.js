@@ -56,6 +56,12 @@ const basketItemSchema = new mongoose.Schema({
     primary: { qty: Number, count: Number, total: Number },
     remainder: { count: Number },
   },
+attachments: [{
+  url: String,
+  name: String,
+  fileType: String,
+}],
+memberNote: { type: String, default: '' },
 
   deliveryStatus: {
     type: String,
