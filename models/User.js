@@ -7,6 +7,27 @@ const userSchema = new mongoose.Schema({
   avatar: { type: String, default: '' },
   authProvider: { type: String, enum: ['google'], default: 'google' },
   phone: { type: String, default: '' },
+  lastLoginAt: { type: Date, default: null },
+  lastSeenAt: { type: Date, default: null },
+  isOnline: { type: Boolean, default: false },
+  cartSnapshot: {
+    items: [{
+      productId: String,
+      variantId: String,
+      name: String,
+      variantName: String,
+      quantity: Number,
+      price: Number,
+    }],
+    itemCount: { type: Number, default: 0 },
+    totalAmount: { type: Number, default: 0 },
+    updatedAt: { type: Date, default: null },
+  },
+  loginHistory: [{
+    loginAt: { type: Date, default: Date.now },
+    ipAddress: String,
+    userAgent: String,
+  }],
   addresses: [{
     type: { type: String, enum: ['billing', 'shipping'], default: 'billing' },
     name: String,

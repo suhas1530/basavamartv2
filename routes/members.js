@@ -140,6 +140,45 @@ router.get('/admin/all', protectAdmin, async (req, res) => {
   }
 });
 
+// ===== ADMIN: Create member directly =====
+router.post('/admin/create', protectAdmin, async (req, res) => {
+  try {
+    const { memberId, name, email, phone, address, password } = req.body;
+
+    if (!name || !phone || !memberId || !password) {
+      return res.status(400).json({ success: false, message: 'Name, phone, member ID and password are required' });
+    }
+
+    const existingMember = await Member.findOne({ memberId });
+    if (existingMember) {
+      return res.status(400).json({ success: false, message: 'Member ID already exists' });
+    }
+
+    const member = await Member.create({
+      memberId,
+      password,
+      name,
+      email: email || '',
+      phone,
+      isActive: true,
+      status: 'active',
+      businessProfile: {
+        address: address || '',
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      member: {
+        ...member.toObject(),
+        plainPassword: password,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ===== MEMBER: Update business profile =====
 router.put('/profile', protectMember, upload.fields([
   { name: 'companyLogo', maxCount: 1 },

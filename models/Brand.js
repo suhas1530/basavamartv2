@@ -5,6 +5,7 @@ const brandSchema = new mongoose.Schema({
   logo: { type: String, default: '' },
   status: { type: String, enum: ['published', 'draft', 'hold'], default: 'published' },
   description: { type: String, default: '' },
+  order: { type: Number, default: 0 },
   totalProducts: { type: Number, default: 0 },
   totalOrders: { type: Number, default: 0 },
   totalRevenue: { type: Number, default: 0 },

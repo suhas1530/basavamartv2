@@ -25,7 +25,20 @@ router.get('/google', passport.authenticate('google', { scope: ['profile', 'emai
 
 router.get('/google/callback',
   passport.authenticate('google', { session: false, failureRedirect: `${process.env.CLIENT_URL}/login?error=google_failed` }),
-  (req, res) => {
+  async (req, res) => {
+    const loginHistoryEntry = {
+      loginAt: new Date(),
+      ipAddress: req.ip || '',
+      userAgent: req.get('User-Agent') || '',
+    };
+
+    await User.findByIdAndUpdate(req.user._id, {
+      lastLoginAt: new Date(),
+      lastSeenAt: new Date(),
+      isOnline: true,
+      $push: { loginHistory: { $each: [loginHistoryEntry], $slice: -20 } },
+    });
+
     const token = generateToken(req.user._id, 'user');
     res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}&role=user`);
   }
@@ -61,7 +74,11 @@ router.post('/member/login', async (req, res) => {
 });
 
 // ============ GET CURRENT USER ============
-router.get('/me/user', protectUser, (req, res) => {
+router.get('/me/user', protectUser, async (req, res) => {
+  await User.findByIdAndUpdate(req.user._id, {
+    lastSeenAt: new Date(),
+    isOnline: true,
+  });
   res.json({ success: true, user: req.user });
 });
 

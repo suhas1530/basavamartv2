@@ -6,10 +6,23 @@ const { protectAdmin } = require('../middleware/auth');
 const upload = require('../config/multer');
 
 // GET categories by brand (public)
+// router.get('/brand/:brandId', async (req, res) => {
+//   try {
+//     const categories = await Category.find({ brand: req.params.brandId, status: 'published' })
+//       .populate('subcategories');
+//     res.json({ success: true, categories });
+//   } catch (err) {
+//     res.status(500).json({ success: false, message: err.message });
+//   }
+// });
+
+
+//agust
 router.get('/brand/:brandId', async (req, res) => {
   try {
     const categories = await Category.find({ brand: req.params.brandId, status: 'published' })
-      .populate('subcategories');
+      .sort({ order: 1 })
+      .populate({ path: 'subcategories', match: { status: 'published' }, options: { sort: { order: 1 } } });
     res.json({ success: true, categories });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -17,6 +30,24 @@ router.get('/brand/:brandId', async (req, res) => {
 });
 
 // GET all categories admin
+// router.get('/admin/all', protectAdmin, async (req, res) => {
+//   try {
+//     const { brandId, search } = req.query;
+//     const query = {};
+//     if (brandId) query.brand = brandId;
+//     if (search) query.name = { $regex: search, $options: 'i' };
+//     const categories = await Category.find(query)
+//       .populate('brand', 'name logo')
+//       .populate('subcategories');
+//     res.json({ success: true, categories });
+//   } catch (err) {
+//     res.status(500).json({ success: false, message: err.message });
+//   }
+// });
+
+
+//august
+
 router.get('/admin/all', protectAdmin, async (req, res) => {
   try {
     const { brandId, search } = req.query;
@@ -24,8 +55,9 @@ router.get('/admin/all', protectAdmin, async (req, res) => {
     if (brandId) query.brand = brandId;
     if (search) query.name = { $regex: search, $options: 'i' };
     const categories = await Category.find(query)
+      .sort({ order: 1 })
       .populate('brand', 'name logo')
-      .populate('subcategories');
+      .populate({ path: 'subcategories', options: { sort: { order: 1 } } });
     res.json({ success: true, categories });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -33,13 +65,28 @@ router.get('/admin/all', protectAdmin, async (req, res) => {
 });
 
 // CREATE category
+// router.post('/', protectAdmin, upload.single('image'), async (req, res) => {
+//   try {
+//     const { name, brandId, status } = req.body;
+//     const image = req.file ? `/uploads/categories/${req.file.filename}` : '';
+//     const category = await Category.create({ name, brand: brandId, image, status: status || 'published' });
+
+//     // Add to brand's category list
+//     res.status(201).json({ success: true, category });
+//   } catch (err) {
+//     res.status(500).json({ success: false, message: err.message });
+//   }
+// });
+
+
+
+//agust
 router.post('/', protectAdmin, upload.single('image'), async (req, res) => {
   try {
     const { name, brandId, status } = req.body;
     const image = req.file ? `/uploads/categories/${req.file.filename}` : '';
-    const category = await Category.create({ name, brand: brandId, image, status: status || 'published' });
-
-    // Add to brand's category list
+    const order = await Category.countDocuments({ brand: brandId });
+    const category = await Category.create({ name, brand: brandId, image, status: status || 'published', order });
     res.status(201).json({ success: true, category });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -81,13 +128,64 @@ router.patch('/:id/status', protectAdmin, async (req, res) => {
 });
 
 // ======== SUBCATEGORY ========
+// router.post('/subcategory', protectAdmin, upload.single('image'), async (req, res) => {
+//   try {
+//     const { name, categoryId, brandId, status } = req.body;
+//     const image = req.file ? `/uploads/categories/${req.file.filename}` : '';
+//     const sub = await Subcategory.create({ name, category: categoryId, brand: brandId, image, status: status || 'published' });
+//     await Category.findByIdAndUpdate(categoryId, { $push: { subcategories: sub._id } });
+//     res.status(201).json({ success: true, subcategory: sub });
+//   } catch (err) {
+//     res.status(500).json({ success: false, message: err.message });
+//   }
+// });
+
+
+//agust
+
 router.post('/subcategory', protectAdmin, upload.single('image'), async (req, res) => {
   try {
     const { name, categoryId, brandId, status } = req.body;
     const image = req.file ? `/uploads/categories/${req.file.filename}` : '';
-    const sub = await Subcategory.create({ name, category: categoryId, brand: brandId, image, status: status || 'published' });
+    const order = await Subcategory.countDocuments({ category: categoryId });
+    const sub = await Subcategory.create({ name, category: categoryId, brand: brandId, image, status: status || 'published', order });
     await Category.findByIdAndUpdate(categoryId, { $push: { subcategories: sub._id } });
     res.status(201).json({ success: true, subcategory: sub });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+
+// REORDER categories
+router.patch('/reorder', protectAdmin, async (req, res) => {
+  try {
+    const { items } = req.body; // [{ _id, order }]
+    if (!Array.isArray(items) || !items.length) {
+      return res.status(400).json({ success: false, message: 'items array required' });
+    }
+    const ops = items.map(({ _id, order }) => ({
+      updateOne: { filter: { _id }, update: { $set: { order } } }
+    }));
+    await Category.bulkWrite(ops);
+    res.json({ success: true, message: 'Order updated' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// REORDER subcategories within a category
+router.patch('/subcategory/reorder', protectAdmin, async (req, res) => {
+  try {
+    const { items } = req.body; // [{ _id, order }]
+    if (!Array.isArray(items) || !items.length) {
+      return res.status(400).json({ success: false, message: 'items array required' });
+    }
+    const ops = items.map(({ _id, order }) => ({
+      updateOne: { filter: { _id }, update: { $set: { order } } }
+    }));
+    await Subcategory.bulkWrite(ops);
+    res.json({ success: true, message: 'Order updated' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -115,9 +213,22 @@ router.delete('/subcategory/:id', protectAdmin, async (req, res) => {
   }
 });
 
+// router.get('/subcategory/category/:categoryId', async (req, res) => {
+//   try {
+//     const subs = await Subcategory.find({ category: req.params.categoryId, status: 'published' });
+//     res.json({ success: true, subcategories: subs });
+//   } catch (err) {
+//     res.status(500).json({ success: false, message: err.message });
+//   }
+// });
+
+
+
+//agust
+
 router.get('/subcategory/category/:categoryId', async (req, res) => {
   try {
-    const subs = await Subcategory.find({ category: req.params.categoryId, status: 'published' });
+    const subs = await Subcategory.find({ category: req.params.categoryId, status: 'published' }).sort({ order: 1 });
     res.json({ success: true, subcategories: subs });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
