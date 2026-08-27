@@ -72,7 +72,7 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-const subDirs = ['products', 'variants', 'brands', 'categories', 'ads', 'members', 'settings', 'catalogs', 'temp'];
+const subDirs = ['products', 'variants', 'pipes', 'pipeVariants', 'pipeCatalogs', 'brands', 'categories', 'ads', 'members', 'settings', 'catalogs', 'temp'];
 subDirs.forEach(dir => {
   const dirPath = path.join(uploadsDir, dir);
   if (!fs.existsSync(dirPath)) {
@@ -85,10 +85,13 @@ const storage = multer.diskStorage({
     let folder = 'temp';
     const url = req.originalUrl;
 
-    if (file.fieldname && file.fieldname.startsWith('variantImages_')) folder = 'variants';
+    if (url.includes('/pipes') && file.fieldname && file.fieldname.startsWith('variantImages_')) folder = 'pipeVariants';
+    else if (file.fieldname && file.fieldname.startsWith('variantImages_')) folder = 'variants';
     else if (url.includes('/brands')) folder = 'brands';
     else if (url.includes('/categories')) folder = 'categories';
+    else if (url.includes('/pipes') && file.fieldname === 'catalogs') folder = 'pipeCatalogs';
     else if (file.fieldname === 'catalogs' || (url.includes('/products') && file.mimetype.includes('pdf'))) folder = 'catalogs';
+    else if (url.includes('/pipes')) folder = 'pipes';
     else if (url.includes('/products')) folder = 'products';
     else if (url.includes('/ads')) folder = 'ads';
     else if (url.includes('/members') || url.includes('/member')) folder = 'members';

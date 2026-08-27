@@ -8,11 +8,12 @@ const upload = require('../config/multer');
 // GET all brands (public)
 router.get('/', async (req, res) => {
   try {
-    const { search, status, page = 1, limit = 50 } = req.query;
+    const { search, status, accessLevel, page = 1, limit = 50 } = req.query;
     const query = {};
     if (search) query.name = { $regex: search, $options: 'i' };
     if (status) query.status = status;
     else query.status = 'published'; // public only sees published
+    if (accessLevel === 'user' || accessLevel === 'member') query.accessLevel = { $in: [accessLevel, 'both'] };
 
     const brands = await Brand.find(query)
       .sort({ order: 1, createdAt: -1 })
@@ -48,13 +49,13 @@ router.get('/admin/all', protectAdmin, async (req, res) => {
 // CREATE brand
 router.post('/', protectAdmin, upload.single('logo'), async (req, res) => {
   try {
-    const { name, description, status } = req.body;
+    const { name, description, status, accessLevel } = req.body;
     const existing = await Brand.findOne({ name: { $regex: new RegExp(`^${name}$`, 'i') } });
     if (existing) return res.status(400).json({ success: false, message: 'Brand already exists' });
 
     const logo = req.file ? `/uploads/brands/${req.file.filename}` : '';
     const order = await Brand.countDocuments();
-    const brand = await Brand.create({ name, description, logo, status: status || 'published', order });
+    const brand = await Brand.create({ name, description, logo, status: status || 'published', accessLevel: accessLevel || 'both', order });
     res.status(201).json({ success: true, brand });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -82,8 +83,8 @@ router.patch('/reorder', protectAdmin, async (req, res) => {
 // UPDATE brand
 router.put('/:id', protectAdmin, upload.single('logo'), async (req, res) => {
   try {
-    const { name, description, status } = req.body;
-    const updateData = { name, description, status };
+    const { name, description, status, accessLevel } = req.body;
+    const updateData = { name, description, status, accessLevel: accessLevel || 'both' };
     if (req.file) updateData.logo = `/uploads/brands/${req.file.filename}`;
 
     const brand = await Brand.findByIdAndUpdate(req.params.id, updateData, { new: true });

@@ -20,9 +20,16 @@ const upload = require('../config/multer');
 //agust
 router.get('/brand/:brandId', async (req, res) => {
   try {
-    const categories = await Category.find({ brand: req.params.brandId, status: 'published' })
+    const audience = req.query.accessLevel === 'member' || req.query.accessLevel === 'user' ? req.query.accessLevel : null;
+    const categoryQuery = { brand: req.params.brandId, status: 'published' };
+    const subcategoryMatch = { status: 'published' };
+    if (audience) {
+      categoryQuery.accessLevel = { $in: [audience, 'both'] };
+      subcategoryMatch.accessLevel = { $in: [audience, 'both'] };
+    }
+    const categories = await Category.find(categoryQuery)
       .sort({ order: 1 })
-      .populate({ path: 'subcategories', match: { status: 'published' }, options: { sort: { order: 1 } } });
+      .populate({ path: 'subcategories', match: subcategoryMatch, options: { sort: { order: 1 } } });
     res.json({ success: true, categories });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -83,10 +90,10 @@ router.get('/admin/all', protectAdmin, async (req, res) => {
 //agust
 router.post('/', protectAdmin, upload.single('image'), async (req, res) => {
   try {
-    const { name, brandId, status } = req.body;
+    const { name, brandId, status, accessLevel } = req.body;
     const image = req.file ? `/uploads/categories/${req.file.filename}` : '';
     const order = await Category.countDocuments({ brand: brandId });
-    const category = await Category.create({ name, brand: brandId, image, status: status || 'published', order });
+    const category = await Category.create({ name, brand: brandId, image, status: status || 'published', accessLevel: accessLevel || 'both', order });
     res.status(201).json({ success: true, category });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -96,8 +103,8 @@ router.post('/', protectAdmin, upload.single('image'), async (req, res) => {
 // UPDATE category
 router.put('/:id', protectAdmin, upload.single('image'), async (req, res) => {
   try {
-    const { name, status } = req.body;
-    const updateData = { name, status };
+    const { name, status, accessLevel } = req.body;
+    const updateData = { name, status, accessLevel: accessLevel || 'both' };
     if (req.file) updateData.image = `/uploads/categories/${req.file.filename}`;
     const category = await Category.findByIdAndUpdate(req.params.id, updateData, { new: true });
     res.json({ success: true, category });
@@ -145,10 +152,10 @@ router.patch('/:id/status', protectAdmin, async (req, res) => {
 
 router.post('/subcategory', protectAdmin, upload.single('image'), async (req, res) => {
   try {
-    const { name, categoryId, brandId, status } = req.body;
+    const { name, categoryId, brandId, status, accessLevel } = req.body;
     const image = req.file ? `/uploads/categories/${req.file.filename}` : '';
     const order = await Subcategory.countDocuments({ category: categoryId });
-    const sub = await Subcategory.create({ name, category: categoryId, brand: brandId, image, status: status || 'published', order });
+    const sub = await Subcategory.create({ name, category: categoryId, brand: brandId, image, status: status || 'published', accessLevel: accessLevel || 'both', order });
     await Category.findByIdAndUpdate(categoryId, { $push: { subcategories: sub._id } });
     res.status(201).json({ success: true, subcategory: sub });
   } catch (err) {
@@ -193,8 +200,8 @@ router.patch('/subcategory/reorder', protectAdmin, async (req, res) => {
 
 router.put('/subcategory/:id', protectAdmin, upload.single('image'), async (req, res) => {
   try {
-    const { name, status } = req.body;
-    const updateData = { name, status };
+    const { name, status, accessLevel } = req.body;
+    const updateData = { name, status, accessLevel: accessLevel || 'both' };
     if (req.file) updateData.image = `/uploads/categories/${req.file.filename}`;
     const sub = await Subcategory.findByIdAndUpdate(req.params.id, updateData, { new: true });
     res.json({ success: true, subcategory: sub });
@@ -228,7 +235,9 @@ router.delete('/subcategory/:id', protectAdmin, async (req, res) => {
 
 router.get('/subcategory/category/:categoryId', async (req, res) => {
   try {
-    const subs = await Subcategory.find({ category: req.params.categoryId, status: 'published' }).sort({ order: 1 });
+    const query = { category: req.params.categoryId, status: 'published' };
+    if (req.query.accessLevel === 'user' || req.query.accessLevel === 'member') query.accessLevel = { $in: [req.query.accessLevel, 'both'] };
+    const subs = await Subcategory.find(query).sort({ order: 1 });
     res.json({ success: true, subcategories: subs });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

@@ -1,6 +1,6 @@
 // const express = require('express');
 // const router = express.Router();
-// const Product = require('../models/Product');
+// const Pipe = require('../models/Pipe');
 // const Brand = require('../models/Brand');
 // const { Category, Subcategory } = require('../models/Category');
 // const { protectAdmin, protectUser, protectMember } = require('../middleware/auth');
@@ -28,7 +28,7 @@
 //   };
 // }
 
-// // GET all products (public, with filters)
+// // GET all pipes (public, with filters)
 // router.get('/', async (req, res) => {
 //   try {
 //     const { search, brand, category, subcategory, accessLevel, page = 1, limit = 20 } = req.query;
@@ -40,7 +40,7 @@
 //     if (accessLevel) query.accessLevel = { $in: [accessLevel, 'both'] };
 //     else query.accessLevel = { $in: ['user', 'both'] };
 
-//     const products = await Product.find(query)
+//     const pipes = await Pipe.find(query)
 //       .populate('brand', 'name logo')
 //       .populate('category', 'name')
 //       .populate('subcategory', 'name')
@@ -48,14 +48,14 @@
 //       .skip((page - 1) * limit)
 //       .limit(Number(limit));
 
-//     const total = await Product.countDocuments(query);
-//     res.json({ success: true, products, total, pages: Math.ceil(total / limit) });
+//     const total = await Pipe.countDocuments(query);
+//     res.json({ success: true, pipes, total, pages: Math.ceil(total / limit) });
 //   } catch (err) {
 //     res.status(500).json({ success: false, message: err.message });
 //   }
 // });
 
-// // GET member products (no prices)
+// // GET member pipes (no prices)
 // router.get('/member', protectMember, async (req, res) => {
 //   try {
 //     const { search, brand, category, subcategory, page = 1, limit = 20 } = req.query;
@@ -65,7 +65,7 @@
 //     if (category) query.category = category;
 //     if (subcategory) query.subcategory = subcategory;
 
-//     const products = await Product.find(query)
+//     const pipes = await Pipe.find(query)
 //       .populate('brand', 'name logo')
 //       .populate('category', 'name')
 //       .populate('subcategory', 'name')
@@ -74,8 +74,8 @@
 //       .limit(Number(limit))
 //       .select('-variants.finalPrice -variants.listPrice -variants.discountPercent -variants.profitPercent');
 
-//     const total = await Product.countDocuments(query);
-//     res.json({ success: true, products, total, pages: Math.ceil(total / limit) });
+//     const total = await Pipe.countDocuments(query);
+//     res.json({ success: true, pipes, total, pages: Math.ceil(total / limit) });
 //   } catch (err) {
 //     res.status(500).json({ success: false, message: err.message });
 //   }
@@ -84,11 +84,11 @@
 // // GET single product
 // router.get('/:id', async (req, res) => {
 //   try {
-//     const product = await Product.findById(req.params.id)
+//     const product = await Pipe.findById(req.params.id)
 //       .populate('brand', 'name logo')
 //       .populate('category', 'name')
 //       .populate('subcategory', 'name');
-//     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+//     if (!product) return res.status(404).json({ success: false, message: 'Pipe not found' });
 //     res.json({ success: true, product });
 //   } catch (err) {
 //     res.status(500).json({ success: false, message: err.message });
@@ -98,7 +98,7 @@
 // // Track recent view
 // router.post('/:id/view', async (req, res) => {
 //   try {
-//     await Product.findByIdAndUpdate(req.params.id, { $inc: { totalViews: 1 } });
+//     await Pipe.findByIdAndUpdate(req.params.id, { $inc: { totalViews: 1 } });
 //     const { userId, memberId } = req.body;
 //     if (userId) {
 //       const User = require('../models/User');
@@ -126,7 +126,7 @@
 
 // // ====== ADMIN ROUTES ======
 
-// // GET admin all products
+// // GET admin all pipes
 // router.get('/admin/all', protectAdmin, async (req, res) => {
 //   try {
 //     const { search, brand, category, subcategory, status, startDate, endDate, page = 1, limit = 20 } = req.query;
@@ -144,15 +144,15 @@
 //       if (startDate) query.createdAt.$gte = new Date(startDate);
 //       if (endDate) query.createdAt.$lte = new Date(endDate);
 //     }
-//     const products = await Product.find(query)
+//     const pipes = await Pipe.find(query)
 //       .populate('brand', 'name logo')
 //       .populate('category', 'name')
 //       .populate('subcategory', 'name')
 //       .sort({ createdAt: -1 })
 //       .skip((page - 1) * limit)
 //       .limit(Number(limit));
-//     const total = await Product.countDocuments(query);
-//     res.json({ success: true, products, total, pages: Math.ceil(total / limit) });
+//     const total = await Pipe.countDocuments(query);
+//     res.json({ success: true, pipes, total, pages: Math.ceil(total / limit) });
 //   } catch (err) {
 //     res.status(500).json({ success: false, message: err.message });
 //   }
@@ -165,10 +165,10 @@
 // ]), async (req, res) => {
 //   try {
 //     const body = req.body;
-//     const images = req.files?.images?.map(f => `/uploads/products/${f.filename}`) || [];
+//     const images = req.files?.images?.map(f => `/uploads/pipes/${f.filename}`) || [];
 //     const catalogs = req.files?.catalogs?.map(f => ({
 //       name: f.originalname,
-//       path: `/uploads/catalogs/${f.filename}`,
+//       path: `/uploads/pipeCatalogs/${f.filename}`,
 //     })) || [];
 
 //     let variants = [];
@@ -187,7 +187,7 @@
 //       videoLinks = typeof body.videoLinks === 'string' ? JSON.parse(body.videoLinks) : body.videoLinks;
 //     }
 
-//     const product = await Product.create({
+//     const product = await Pipe.create({
 //       name: body.name,
 //       hsnCode: body.hsnCode,
 //       brand: body.brandId,
@@ -203,9 +203,9 @@
 //       status: body.status || 'published',
 //     });
 
-//     await Brand.findByIdAndUpdate(body.brandId, { $inc: { totalProducts: 1 } });
+//     await Brand.findByIdAndUpdate(body.brandId, { $inc: { totalPipes: 1 } });
 
-//     const populated = await Product.findById(product._id)
+//     const populated = await Pipe.findById(product._id)
 //       .populate('brand', 'name logo')
 //       .populate('category', 'name')
 //       .populate('subcategory', 'name');
@@ -223,15 +223,15 @@
 // ]), async (req, res) => {
 //   try {
 //     const body = req.body;
-//     const product = await Product.findById(req.params.id);
-//     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+//     const product = await Pipe.findById(req.params.id);
+//     if (!product) return res.status(404).json({ success: false, message: 'Pipe not found' });
 
 //     if (req.files?.images?.length) {
-//       const newImages = req.files.images.map(f => `/uploads/products/${f.filename}`);
+//       const newImages = req.files.images.map(f => `/uploads/pipes/${f.filename}`);
 //       body.images = [...(product.images || []), ...newImages];
 //     }
 //     if (req.files?.catalogs?.length) {
-//       const newCatalogs = req.files.catalogs.map(f => ({ name: f.originalname, path: `/uploads/catalogs/${f.filename}` }));
+//       const newCatalogs = req.files.catalogs.map(f => ({ name: f.originalname, path: `/uploads/pipeCatalogs/${f.filename}` }));
 //       body.catalogs = [...(product.catalogs || []), ...newCatalogs];
 //     }
 //     if (body.variants) {
@@ -241,7 +241,7 @@
 //     if (body.descriptions && typeof body.descriptions === 'string') body.descriptions = JSON.parse(body.descriptions);
 //     if (body.videoLinks && typeof body.videoLinks === 'string') body.videoLinks = JSON.parse(body.videoLinks);
 
-//     const updated = await Product.findByIdAndUpdate(req.params.id, body, { new: true })
+//     const updated = await Pipe.findByIdAndUpdate(req.params.id, body, { new: true })
 //       .populate('brand', 'name logo')
 //       .populate('category', 'name')
 //       .populate('subcategory', 'name');
@@ -255,7 +255,7 @@
 // // STATUS update
 // router.patch('/:id/status', protectAdmin, async (req, res) => {
 //   try {
-//     const product = await Product.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
+//     const product = await Pipe.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
 //     res.json({ success: true, product });
 //   } catch (err) {
 //     res.status(500).json({ success: false, message: err.message });
@@ -265,9 +265,9 @@
 // // DELETE product
 // router.delete('/:id', protectAdmin, async (req, res) => {
 //   try {
-//     const product = await Product.findByIdAndDelete(req.params.id);
-//     if (product) await Brand.findByIdAndUpdate(product.brand, { $inc: { totalProducts: -1 } });
-//     res.json({ success: true, message: 'Product deleted' });
+//     const product = await Pipe.findByIdAndDelete(req.params.id);
+//     if (product) await Brand.findByIdAndUpdate(product.brand, { $inc: { totalPipes: -1 } });
+//     res.json({ success: true, message: 'Pipe deleted' });
 //   } catch (err) {
 //     res.status(500).json({ success: false, message: err.message });
 //   }
@@ -288,7 +288,7 @@
 //       { header: 'Brand', key: 'brand', width: 20 },
 //       { header: 'Category', key: 'category', width: 20 },
 //       { header: 'Subcategory', key: 'subcategory', width: 20 },
-//       { header: 'Product Name', key: 'productName', width: 25 },
+//       { header: 'Pipe Name', key: 'productName', width: 25 },
 //       { header: 'HSN Code', key: 'hsnCode', width: 15 },
 //       { header: 'Variant Name', key: 'variantName', width: 20 },
 //       { header: 'Stock', key: 'stock', width: 10 },
@@ -385,15 +385,15 @@
 //       if (endDate) query.createdAt.$lte = new Date(endDate);
 //     }
 
-//     const products = await Product.find(query)
+//     const pipes = await Pipe.find(query)
 //       .populate('brand', 'name logo')
 //       .populate('category', 'name')
 //       .populate('subcategory', 'name');
 
 //     const workbook = new ExcelJS.Workbook();
-//     const sheet = workbook.addWorksheet('Products');
+//     const sheet = workbook.addWorksheet('Pipes');
 //     sheet.columns = [
-//       { header: 'Product Name', key: 'name', width: 30 },
+//       { header: 'Pipe Name', key: 'name', width: 30 },
 //       { header: 'Brand', key: 'brand', width: 20 },
 //       { header: 'Category', key: 'category', width: 20 },
 //       { header: 'Subcategory', key: 'subcategory', width: 20 },
@@ -415,7 +415,7 @@
 //     sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
 //     sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE26A26' } };
 
-//     products.forEach(p => {
+//     pipes.forEach(p => {
 //       if (!p.variants.length) {
 //         sheet.addRow({ name: p.name, brand: p.brand?.name, category: p.category?.name, subcategory: p.subcategory?.name, hsnCode: p.hsnCode, accessLevel: p.accessLevel, status: p.status });
 //       } else {
@@ -431,9 +431,9 @@
 //       }
 //     });
 
-//     const filePath = path.join(__dirname, '../uploads/temp', `products-${Date.now()}.xlsx`);
+//     const filePath = path.join(__dirname, '../uploads/temp', `pipes-${Date.now()}.xlsx`);
 //     await workbook.xlsx.writeFile(filePath);
-//     res.download(filePath, 'products.xlsx', () => fs.unlinkSync(filePath));
+//     res.download(filePath, 'pipes.xlsx', () => fs.unlinkSync(filePath));
 //   } catch (err) {
 //     res.status(500).json({ success: false, message: err.message });
 //   }
@@ -448,7 +448,7 @@
 
 const express = require('express');
 const router = express.Router();
-const Product = require('../models/Product');
+const Pipe = require('../models/Pipe');
 const Brand = require('../models/Brand');
 const { Category, Subcategory } = require('../models/Category');
 const { protectAdmin, protectUser, protectMember } = require('../middleware/auth');
@@ -476,9 +476,10 @@ async function applyCatalogVisibility(query, audience) {
 
 // Helper: calculate variant pricing
 function calculateVariantPricing(variant) {
-  const { listPrice, discountPercent, profitPercent, gstPercent } = variant;
-  const discountAmount = (listPrice * discountPercent) / 100;
-  const priceAfterDiscount = listPrice - discountAmount;
+  const { weight, listPrice, discountPercent, profitPercent, gstPercent } = variant;
+  const weightedAmount = (Number(weight) || 0) * (Number(listPrice) || 0);
+  const discountAmount = (weightedAmount * discountPercent) / 100;
+  const priceAfterDiscount = weightedAmount - discountAmount;
   const profitAmount = (priceAfterDiscount * profitPercent) / 100;
   const basePrice = priceAfterDiscount + profitAmount;
   const gstAmount = (basePrice * gstPercent) / 100;
@@ -502,12 +503,12 @@ function attachVariantImages(variants, files) {
   return variants.map((v, idx) => {
     const existingImages = Array.isArray(v.images) ? v.images : [];
     const newFiles = (files || []).filter(f => f.fieldname === `variantImages_${idx}`);
-    const newImages = newFiles.map(f => `/uploads/variants/${f.filename}`);
+    const newImages = newFiles.map(f => `/uploads/pipeVariants/${f.filename}`);
     return { ...v, images: [...existingImages, ...newImages] };
   });
 }
 
-// GET all products (public, with filters)
+// GET all pipes (public, with filters)
 router.get('/', async (req, res) => {
   try {
     const { search, brand, category, subcategory, accessLevel, page = 1, limit = 20 } = req.query;
@@ -531,7 +532,7 @@ router.get('/', async (req, res) => {
     if (accessLevel) query.accessLevel = { $in: [accessLevel, 'both'] };
     else query.accessLevel = { $in: ['user', 'both'] };
 
-    const products = await Product.find(query)
+    const pipes = await Pipe.find(query)
       .populate('brand', 'name logo')
       .populate('category', 'name')
       .populate('subcategory', 'name')
@@ -539,14 +540,14 @@ router.get('/', async (req, res) => {
       .skip((page - 1) * limit)
       .limit(Number(limit));
 
-    const total = await Product.countDocuments(query);
-    res.json({ success: true, products, total, pages: Math.ceil(total / limit) });
+    const total = await Pipe.countDocuments(query);
+    res.json({ success: true, pipes, total, pages: Math.ceil(total / limit) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// GET member products (no prices)
+// GET member pipes (no prices)
 router.get('/member', protectMember, async (req, res) => {
   try {
     const { search, brand, category, subcategory, page = 1, limit = 20 } = req.query;
@@ -557,7 +558,7 @@ router.get('/member', protectMember, async (req, res) => {
     if (category) query.category = category;
     if (subcategory) query.subcategory = subcategory;
 
-    const products = await Product.find(query)
+    const pipes = await Pipe.find(query)
       .populate('brand', 'name logo')
       .populate('category', 'name')
       .populate('subcategory', 'name')
@@ -566,8 +567,8 @@ router.get('/member', protectMember, async (req, res) => {
       .limit(Number(limit))
       .select('-variants.finalPrice -variants.listPrice -variants.discountPercent -variants.profitPercent');
 
-    const total = await Product.countDocuments(query);
-    res.json({ success: true, products, total, pages: Math.ceil(total / limit) });
+    const total = await Pipe.countDocuments(query);
+    res.json({ success: true, pipes, total, pages: Math.ceil(total / limit) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -578,12 +579,12 @@ router.get('/:id', async (req, res) => {
   try {
     const detailQuery = { _id: req.params.id };
     if (req.query.accessLevel === 'user' || req.query.accessLevel === 'member') await applyCatalogVisibility(detailQuery, req.query.accessLevel);
-    const product = await Product.findOne(detailQuery)
+    const pipe = await Pipe.findOne(detailQuery)
       .populate('brand', 'name logo')
       .populate('category', 'name')
       .populate('subcategory', 'name');
-    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-    res.json({ success: true, product });
+    if (!pipe) return res.status(404).json({ success: false, message: 'Pipe not found' });
+    res.json({ success: true, pipe });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -592,7 +593,7 @@ router.get('/:id', async (req, res) => {
 // Track recent view
 router.post('/:id/view', async (req, res) => {
   try {
-    await Product.findByIdAndUpdate(req.params.id, { $inc: { totalViews: 1 } });
+    await Pipe.findByIdAndUpdate(req.params.id, { $inc: { totalViews: 1 } });
     const { userId, memberId } = req.body;
     if (userId) {
       const User = require('../models/User');
@@ -620,7 +621,7 @@ router.post('/:id/view', async (req, res) => {
 
 // ====== ADMIN ROUTES ======
 
-// GET admin all products
+// GET admin all pipes
 router.get('/admin/all', protectAdmin, async (req, res) => {
   try {
     const { search, brand, category, subcategory, status, startDate, endDate, page = 1, limit = 20 } = req.query;
@@ -638,15 +639,15 @@ router.get('/admin/all', protectAdmin, async (req, res) => {
       if (startDate) query.createdAt.$gte = new Date(startDate);
       if (endDate) query.createdAt.$lte = new Date(endDate);
     }
-    const products = await Product.find(query)
+    const pipes = await Pipe.find(query)
       .populate('brand', 'name logo')
       .populate('category', 'name')
       .populate('subcategory', 'name')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));
-    const total = await Product.countDocuments(query);
-    res.json({ success: true, products, total, pages: Math.ceil(total / limit) });
+    const total = await Pipe.countDocuments(query);
+    res.json({ success: true, pipes, total, pages: Math.ceil(total / limit) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -657,10 +658,10 @@ router.post('/', protectAdmin, upload.any(), async (req, res) => {
   try {
     const body = req.body;
     const files = req.files || [];
-    const images = files.filter(f => f.fieldname === 'images').map(f => `/uploads/products/${f.filename}`);
+    const images = files.filter(f => f.fieldname === 'images').map(f => `/uploads/pipes/${f.filename}`);
     const catalogs = files.filter(f => f.fieldname === 'catalogs').map(f => ({
       name: f.originalname,
-      path: `/uploads/catalogs/${f.filename}`,
+      path: `/uploads/pipeCatalogs/${f.filename}`,
     }));
 
     let variants = [];
@@ -679,7 +680,7 @@ router.post('/', protectAdmin, upload.any(), async (req, res) => {
       videoLinks = typeof body.videoLinks === 'string' ? JSON.parse(body.videoLinks) : body.videoLinks;
     }
 
-    const product = await Product.create({
+    const pipe = await Pipe.create({
       name: body.name,
       hsnCode: body.hsnCode,
       brand: body.brandId,
@@ -695,14 +696,14 @@ router.post('/', protectAdmin, upload.any(), async (req, res) => {
       status: body.status || 'published',
     });
 
-    await Brand.findByIdAndUpdate(body.brandId, { $inc: { totalProducts: 1 } });
+    await Brand.findByIdAndUpdate(body.brandId, { $inc: { totalPipes: 1 } });
 
-    const populated = await Product.findById(product._id)
+    const populated = await Pipe.findById(pipe._id)
       .populate('brand', 'name logo')
       .populate('category', 'name')
       .populate('subcategory', 'name');
 
-    res.status(201).json({ success: true, product: populated });
+    res.status(201).json({ success: true, pipe: populated });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -713,23 +714,23 @@ router.put('/:id', protectAdmin, upload.any(), async (req, res) => {
   try {
     const body = req.body;
     const files = req.files || [];
-    const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+    const pipe = await Pipe.findById(req.params.id);
+    if (!pipe) return res.status(404).json({ success: false, message: 'Pipe not found' });
 
-    const newImages = files.filter(f => f.fieldname === 'images').map(f => `/uploads/products/${f.filename}`);
+    const newImages = files.filter(f => f.fieldname === 'images').map(f => `/uploads/pipes/${f.filename}`);
     const keptImages = body.existingImages !== undefined
       ? (typeof body.existingImages === 'string' ? JSON.parse(body.existingImages) : body.existingImages)
-      : (product.images || []);
+      : (pipe.images || []);
     body.images = [...keptImages, ...newImages];
 
-    const newCatalogs = files.filter(f => f.fieldname === 'catalogs').map(f => ({ name: f.originalname, path: `/uploads/catalogs/${f.filename}` }));
+    const newCatalogs = files.filter(f => f.fieldname === 'catalogs').map(f => ({ name: f.originalname, path: `/uploads/pipeCatalogs/${f.filename}` }));
     const keptCatalogs = body.existingCatalogs !== undefined
       ? (typeof body.existingCatalogs === 'string' ? JSON.parse(body.existingCatalogs) : body.existingCatalogs)
-      : (product.catalogs || []);
+      : (pipe.catalogs || []);
     // existingCatalogs from the client is an array of paths (strings); map back to {name, path} objects
     const keptCatalogObjs = keptCatalogs.map((c) => {
       if (typeof c === 'string') {
-        const existing = (product.catalogs || []).find(pc => pc.path === c);
+        const existing = (pipe.catalogs || []).find(pc => pc.path === c);
         return existing || { name: c.split('/').pop(), path: c };
       }
       return c;
@@ -742,12 +743,12 @@ router.put('/:id', protectAdmin, upload.any(), async (req, res) => {
     if (body.descriptions && typeof body.descriptions === 'string') body.descriptions = JSON.parse(body.descriptions);
     if (body.videoLinks && typeof body.videoLinks === 'string') body.videoLinks = JSON.parse(body.videoLinks);
 
-    const updated = await Product.findByIdAndUpdate(req.params.id, body, { new: true })
+    const updated = await Pipe.findByIdAndUpdate(req.params.id, body, { new: true })
       .populate('brand', 'name logo')
       .populate('category', 'name')
       .populate('subcategory', 'name');
 
-    res.json({ success: true, product: updated });
+    res.json({ success: true, pipe: updated });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -756,8 +757,8 @@ router.put('/:id', protectAdmin, upload.any(), async (req, res) => {
 // STATUS update
 router.patch('/:id/status', protectAdmin, async (req, res) => {
   try {
-    const product = await Product.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
-    res.json({ success: true, product });
+    const pipe = await Pipe.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
+    res.json({ success: true, pipe });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -766,9 +767,9 @@ router.patch('/:id/status', protectAdmin, async (req, res) => {
 // DELETE product
 router.delete('/:id', protectAdmin, async (req, res) => {
   try {
-    const product = await Product.findByIdAndDelete(req.params.id);
-    if (product) await Brand.findByIdAndUpdate(product.brand, { $inc: { totalProducts: -1 } });
-    res.json({ success: true, message: 'Product deleted' });
+    const pipe = await Pipe.findByIdAndDelete(req.params.id);
+    if (pipe) await Brand.findByIdAndUpdate(pipe.brand, { $inc: { totalPipes: -1 } });
+    res.json({ success: true, message: 'Pipe deleted' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -777,7 +778,7 @@ router.delete('/:id', protectAdmin, async (req, res) => {
 // ====== EXCEL DOWNLOAD TEMPLATE ======
 router.post('/excel/template', protectAdmin, async (req, res) => {
   try {
-    const { brandId, categoryId, subcategoryId, productName, hsnCode } = req.body;
+    const { brandId, categoryId, subcategoryId, pipeName, hsnCode } = req.body;
     const brand = await Brand.findById(brandId);
     const category = await Category.findById(categoryId);
     const subcategory = subcategoryId ? await Subcategory.findById(subcategoryId) : null;
@@ -789,11 +790,12 @@ router.post('/excel/template', protectAdmin, async (req, res) => {
       { header: 'Brand', key: 'brand', width: 20 },
       { header: 'Category', key: 'category', width: 20 },
       { header: 'Subcategory', key: 'subcategory', width: 20 },
-      { header: 'Product Name', key: 'productName', width: 25 },
+      { header: 'Pipe Name', key: 'productName', width: 25 },
       { header: 'HSN Code', key: 'hsnCode', width: 15 },
       { header: 'Variant Name', key: 'variantName', width: 20 },
       { header: 'Stock', key: 'stock', width: 10 },
       { header: 'Unit', key: 'unit', width: 10 },
+      { header: 'Weight (kg)', key: 'weight', width: 12 },
       { header: 'Weight (kg)', key: 'weight', width: 12 },
       { header: 'List Price', key: 'listPrice', width: 12 },
       { header: 'Discount %', key: 'discountPercent', width: 12 },
@@ -814,7 +816,7 @@ router.post('/excel/template', protectAdmin, async (req, res) => {
       brand: brand?.name || '',
       category: category?.name || '',
       subcategory: subcategory?.name || '',
-      productName: productName || '',
+      productName: pipeName || '',
       hsnCode: hsnCode || '',
       variantName: 'Sample Variant',
       stock: 100,
@@ -886,15 +888,15 @@ router.post('/admin/download', protectAdmin, async (req, res) => {
       if (endDate) query.createdAt.$lte = new Date(endDate);
     }
 
-    const products = await Product.find(query)
+    const pipes = await Pipe.find(query)
       .populate('brand', 'name logo')
       .populate('category', 'name')
       .populate('subcategory', 'name');
 
     const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('Products');
+    const sheet = workbook.addWorksheet('Pipes');
     sheet.columns = [
-      { header: 'Product Name', key: 'name', width: 30 },
+      { header: 'Pipe Name', key: 'name', width: 30 },
       { header: 'Brand', key: 'brand', width: 20 },
       { header: 'Category', key: 'category', width: 20 },
       { header: 'Subcategory', key: 'subcategory', width: 20 },
@@ -904,6 +906,7 @@ router.post('/admin/download', protectAdmin, async (req, res) => {
       { header: 'Variant Name', key: 'variantName', width: 20 },
       { header: 'Stock', key: 'stock', width: 10 },
       { header: 'Unit', key: 'unit', width: 10 },
+      { header: 'Weight (kg)', key: 'weight', width: 12 },
       { header: 'List Price', key: 'listPrice', width: 12 },
       { header: 'Discount %', key: 'discountPercent', width: 12 },
       { header: 'Final Price', key: 'finalPrice', width: 12 },
@@ -916,7 +919,7 @@ router.post('/admin/download', protectAdmin, async (req, res) => {
     sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
     sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE26A26' } };
 
-    products.forEach(p => {
+    pipes.forEach(p => {
       if (!p.variants.length) {
         sheet.addRow({ name: p.name, brand: p.brand?.name, category: p.category?.name, subcategory: p.subcategory?.name, hsnCode: p.hsnCode, accessLevel: p.accessLevel, status: p.status });
       } else {
@@ -924,7 +927,7 @@ router.post('/admin/download', protectAdmin, async (req, res) => {
           sheet.addRow({
             name: p.name, brand: p.brand?.name, category: p.category?.name, subcategory: p.subcategory?.name,
             hsnCode: p.hsnCode, accessLevel: p.accessLevel, status: p.status,
-            variantName: v.name, stock: v.stock, unit: v.unit, listPrice: v.listPrice,
+            variantName: v.name, stock: v.stock, unit: v.unit, weight: v.weight, listPrice: v.listPrice,
             discountPercent: v.discountPercent, finalPrice: v.finalPrice, gstPercent: v.gstPercent,
             primaryThreshold: v.primaryThreshold, secondaryThreshold: v.secondaryThreshold, tertiaryThreshold: v.tertiaryThreshold,
           });
@@ -932,9 +935,9 @@ router.post('/admin/download', protectAdmin, async (req, res) => {
       }
     });
 
-    const filePath = path.join(__dirname, '../uploads/temp', `products-${Date.now()}.xlsx`);
+    const filePath = path.join(__dirname, '../uploads/temp', `pipes-${Date.now()}.xlsx`);
     await workbook.xlsx.writeFile(filePath);
-    res.download(filePath, 'products.xlsx', () => fs.unlinkSync(filePath));
+    res.download(filePath, 'pipes.xlsx', () => fs.unlinkSync(filePath));
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

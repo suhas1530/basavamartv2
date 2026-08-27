@@ -48,6 +48,7 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/brands', require('./routes/brands'));
 app.use('/api/categories', require('./routes/categories'));
 app.use('/api/products', require('./routes/products'));
+app.use('/api/pipes', require('./routes/pipes'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/members', require('./routes/members'));
 app.use('/api/basket', require('./routes/basket'));
@@ -79,6 +80,13 @@ io.on('connection', (socket) => {
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/basava-mart')
   .then(() => {
     console.log('MongoDB connected');
+    const Brand = require('./models/Brand');
+    const { Category, Subcategory } = require('./models/Category');
+    Promise.all([
+      Brand.updateMany({ accessLevel: { $exists: false } }, { $set: { accessLevel: 'both' } }),
+      Category.updateMany({ accessLevel: { $exists: false } }, { $set: { accessLevel: 'both' } }),
+      Subcategory.updateMany({ accessLevel: { $exists: false } }, { $set: { accessLevel: 'both' } }),
+    ]).catch(err => console.error('Access level backfill error:', err.message));
     server.listen(process.env.PORT || 5000, () => {
       console.log(`Server running on port ${process.env.PORT || 5000}`);
     });
