@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Member = require('../models/Member');
 
@@ -49,7 +50,10 @@ const protectAdmin = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded.role !== 'admin') return res.status(403).json({ success: false, message: 'Admin access required' });
-    req.admin = decoded;
+    req.admin = {
+      ...decoded,
+      id: mongoose.Types.ObjectId.isValid(decoded.id) ? decoded.id : new mongoose.Types.ObjectId().toHexString(),
+    };
     next();
   } catch {
     res.status(401).json({ success: false, message: 'Token invalid or expired' });
@@ -57,7 +61,12 @@ const protectAdmin = (req, res, next) => {
 };
 
 const generateToken = (id, role) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || '30d' });
+  const normalizedId =
+    role === 'admin' && (!id || !mongoose.Types.ObjectId.isValid(id))
+      ? new mongoose.Types.ObjectId().toHexString()
+      : id;
+
+  return jwt.sign({ id: normalizedId, role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || '30d' });
 };
 
 module.exports = { protectUser, protectMember, protectAdmin, generateToken };

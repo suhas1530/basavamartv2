@@ -62,6 +62,7 @@ app.use('/api/sites', require('./routes/sites'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/ai', require('./routes/ai'));
 app.use("/api/ai-search", aiRoutes);
+app.use('/api/mini', require('./routes/mini'));
 
 // Socket.io connection
 io.on('connection', (socket) => {

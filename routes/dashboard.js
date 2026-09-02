@@ -20,13 +20,14 @@ router.get('/admin', protectAdmin, async (req, res) => {
     }
 
     const [
-      totalProducts, totalBrands, totalUsers, totalMembers,
+      totalProducts, totalMemberProducts, totalBrands, totalUsers, totalMembers,
       totalOrders, totalMemberOrders,
       userRevenue, memberRevenue,
       pendingOrders, deliveredOrders,
       recentOrders,
     ] = await Promise.all([
       Product.countDocuments(),
+      Product.countDocuments({ accessLevel: { $in: ['member', 'both'] } }),
       Brand.countDocuments(),
       User.countDocuments(),
       Member.countDocuments(),
@@ -51,7 +52,12 @@ router.get('/admin', protectAdmin, async (req, res) => {
     res.json({
       success: true,
       stats: {
-        totalProducts, totalBrands, totalUsers, totalMembers,
+        totalProducts,
+        totalMemberProducts,
+        totalBrands,
+        totalUsers,
+        totalMembers,
+        memberProducts: totalMemberProducts,
         totalOrders: totalOrders + totalMemberOrders,
         totalRevenue: (userRevenue[0]?.total || 0) + (memberRevenue[0]?.total || 0),
         pendingOrders, deliveredOrders,
