@@ -1,6 +1,17 @@
 const mongoose = require('mongoose');
 const MiniProduct = require('../../models/mini/MiniProduct');
 
+const parseArray = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string' || !value.trim()) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
 // GET: Products for admin (with filters for userId, search, price)
 const getAdminProducts = async (req, res) => {
   try {
@@ -48,7 +59,7 @@ const createProducts = async (req, res) => {
     const createdProducts = [];
 
     for (const product of products) {
-      const { miniUserId, productName, brandName, categoryName, subCategoryName, description, unit, qty, price } = product;
+      const { miniUserId, productName, brandName, categoryName, subCategoryName, hsnCode, accessLevel, descriptions, videoLinks, tags, description, unit, qty, price } = product;
 
       if (!productName || !price) {
         return res.status(400).json({
@@ -68,13 +79,19 @@ const createProducts = async (req, res) => {
         brandName: brandName || '',
         categoryName: categoryName || '',
         subCategoryName: subCategoryName || '',
+        hsnCode: hsnCode || '',
+        accessLevel: accessLevel || 'both',
         description: description || '',
+        descriptions: parseArray(descriptions),
+        videoLinks: parseArray(videoLinks),
+        tags: parseArray(tags),
         unit: unit || 'piece',
         qty: qty || 0,
         price,
         status: isPublicProduct ? 'published' : 'draft',
         createdBy,
         media: [],
+        catalogs: [],
       });
 
       createdProducts.push(newProduct);
@@ -96,7 +113,9 @@ const uploadProductMedia = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!req.files || req.files.length === 0) {
+    const mediaFiles = req.files?.media || [];
+    const catalogFiles = req.files?.catalogs || [];
+    if (mediaFiles.length === 0 && catalogFiles.length === 0) {
       return res.status(400).json({ success: false, message: 'No files uploaded' });
     }
 
@@ -105,7 +124,7 @@ const uploadProductMedia = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    const newMedia = req.files.map(file => {
+    const newMedia = mediaFiles.map(file => {
       const ext = file.originalname.split('.').pop()?.toLowerCase() || '';
       const mimetype = file.mimetype || '';
 
@@ -129,15 +148,21 @@ const uploadProductMedia = async (req, res) => {
       };
     });
 
+    const newCatalogs = catalogFiles.map(file => ({
+      url: `/uploads/mini/products/${file.filename}`,
+      name: file.originalname,
+    }));
+
     // Check max 5 media items
-    if (product.media.length + newMedia.length > 5) {
+    if (product.media.length + newMedia.length > 5 || product.catalogs.length + newCatalogs.length > 3) {
       return res.status(400).json({
         success: false,
-        message: `Maximum 5 media items allowed. Current: ${product.media.length}, Adding: ${newMedia.length}`,
+        message: `Maximum 5 images and 3 catalogues allowed. Current images: ${product.media.length}, catalogues: ${product.catalogs.length}`,
       });
     }
 
     product.media.push(...newMedia);
+    product.catalogs.push(...newCatalogs);
     await product.save();
 
     res.status(200).json({
@@ -155,14 +180,19 @@ const uploadProductMedia = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { productName, brandName, categoryName, subCategoryName, description, unit, qty, price } = req.body;
+    const { productName, brandName, categoryName, subCategoryName, hsnCode, accessLevel, descriptions, videoLinks, tags, description, unit, qty, price } = req.body;
 
     const updateData = {};
     if (productName !== undefined) updateData.productName = productName;
     if (brandName !== undefined) updateData.brandName = brandName;
     if (categoryName !== undefined) updateData.categoryName = categoryName;
     if (subCategoryName !== undefined) updateData.subCategoryName = subCategoryName;
+    if (hsnCode !== undefined) updateData.hsnCode = hsnCode;
+    if (accessLevel !== undefined) updateData.accessLevel = accessLevel;
     if (description !== undefined) updateData.description = description;
+    if (descriptions !== undefined) updateData.descriptions = parseArray(descriptions);
+    if (videoLinks !== undefined) updateData.videoLinks = parseArray(videoLinks);
+    if (tags !== undefined) updateData.tags = parseArray(tags);
     if (unit !== undefined) updateData.unit = unit;
     if (qty !== undefined) updateData.qty = qty;
     if (price !== undefined) updateData.price = price;
@@ -239,7 +269,7 @@ const updateProductStatus = async (req, res) => {
   }
 };
 
-// GET: Products visible to a mini user (public + their assigned sphere)
+// GET: Published products assigned to the authenticated mini user.
 const getMiniUserProducts = async (req, res) => {
   try {
     const { q } = req.query;
@@ -247,10 +277,7 @@ const getMiniUserProducts = async (req, res) => {
 
     const filter = {
       status: 'published',
-      $or: [
-        { miniUserId: null },
-        { miniUserId: miniUserId },
-      ],
+      miniUserId,
     };
 
     if (q) {

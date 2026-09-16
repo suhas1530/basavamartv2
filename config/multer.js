@@ -85,8 +85,8 @@ const storage = multer.diskStorage({
     let folder = 'temp';
     const url = req.originalUrl;
 
-    if (url.includes('/pipes') && file.fieldname && file.fieldname.startsWith('variantImages_')) folder = 'pipeVariants';
-    else if (file.fieldname && file.fieldname.startsWith('variantImages_')) folder = 'variants';
+    if (url.includes('/pipes') && file.fieldname && (file.fieldname.startsWith('variantImages_') || file.fieldname.startsWith('variantDocuments_'))) folder = 'pipeVariants';
+    else if (file.fieldname && (file.fieldname.startsWith('variantImages_') || file.fieldname.startsWith('variantDocuments_'))) folder = 'variants';
     else if (url.includes('/brands')) folder = 'brands';
     else if (url.includes('/categories')) folder = 'categories';
     else if (url.includes('/pipes') && file.fieldname === 'catalogs') folder = 'pipeCatalogs';

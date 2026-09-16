@@ -37,7 +37,7 @@ const getAllMiniUsers = async (req, res) => {
 // POST: Create a new mini user (admin only)
 const createMiniUser = async (req, res) => {
   try {
-    const { miniId: customMiniId, name, phone, email, address, note } = req.body;
+    const { miniId: customMiniId, memberId, name, phone, email, address, note } = req.body;
 
     // Determine mini ID
     let miniId = customMiniId;
@@ -57,6 +57,7 @@ const createMiniUser = async (req, res) => {
 
     const newMiniUser = await MiniUser.create({
       miniId: miniId.trim(),
+      memberId: memberId || '',
       name: name || '',
       phone: phone || '',
       email: email || '',
@@ -81,9 +82,11 @@ const createMiniUser = async (req, res) => {
 const updateMiniUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, phone, email, address, note } = req.body;
+    const { miniId, memberId, name, phone, email, address, note } = req.body;
 
     const updateData = {};
+    if (miniId !== undefined) updateData.miniId = miniId;
+    if (memberId !== undefined) updateData.memberId = memberId;
     if (name !== undefined) updateData.name = name;
     if (phone !== undefined) updateData.phone = phone;
     if (email !== undefined) updateData.email = email;

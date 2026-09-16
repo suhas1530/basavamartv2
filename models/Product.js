@@ -71,6 +71,7 @@ const mongoose = require('mongoose');
 
 const variantSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  date: { type: String, default: () => new Date().toISOString().slice(0, 10) },
   stock: { type: Number, default: 0 },
   unit: { type: String, default: 'pcs' },
   weight: { type: Number, default: 0 },
@@ -87,10 +88,14 @@ const variantSchema = new mongoose.Schema({
   finalPrice: { type: Number, default: 0 },
   // Packaging thresholds
   primaryThreshold: { type: Number, default: 0 },
+  primaryThresholdUnit: { type: String, default: 'pcs' },
   secondaryThreshold: { type: Number, default: 0 },
+  secondaryThresholdUnit: { type: String, default: 'pcs' },
   tertiaryThreshold: { type: Number, default: 0 },
+  tertiaryThresholdUnit: { type: String, default: 'pcs' },
   isActive: { type: Boolean, default: true },
   images: [{ type: String }], // per-variant image file paths
+  documents: [{ name: String, path: String }], // per-variant documents
 });
 
 const descriptionSchema = new mongoose.Schema({

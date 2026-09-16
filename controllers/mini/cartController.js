@@ -8,8 +8,14 @@ const getCart = async (req, res) => {
 
     let cart = await MiniCart.findOne({ miniUserId }).populate({
       path: 'items.productId',
-      select: 'productName description brandName categoryName price unit qty media',
+      select: 'productName description brandName categoryName price unit qty media miniUserId status',
     });
+
+    if (cart) {
+      cart.items = cart.items.filter((item) => item.productId &&
+        String(item.productId.miniUserId) === String(miniUserId) &&
+        item.productId.status === 'published');
+    }
 
     if (!cart) {
       // Create empty cart if doesn't exist
@@ -40,13 +46,13 @@ const addToCart = async (req, res) => {
     }
 
     // Verify product exists
-    const product = await MiniProduct.findById(productId);
+    const product = await MiniProduct.findOne({
+      _id: productId,
+      miniUserId,
+      status: 'published',
+    });
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });
-    }
-
-    if (product.status !== 'published') {
-      return res.status(400).json({ success: false, message: 'Product is not available' });
     }
 
     let cart = await MiniCart.findOne({ miniUserId });

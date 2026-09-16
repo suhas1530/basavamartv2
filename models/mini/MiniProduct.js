@@ -23,6 +23,15 @@ const miniProductSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  hsnCode: {
+    type: String,
+    default: '',
+  },
+  accessLevel: {
+    type: String,
+    enum: ['user', 'member', 'both'],
+    default: 'both',
+  },
   media: [
     {
       url: String,
@@ -32,6 +41,29 @@ const miniProductSchema = new mongoose.Schema({
       },
     },
   ],
+  catalogs: [
+    {
+      url: String,
+      name: String,
+    },
+  ],
+  descriptions: [
+    {
+      heading: String,
+      subHeading: String,
+      paragraph: String,
+    },
+  ],
+  videoLinks: [
+    {
+      title: String,
+      url: String,
+    },
+  ],
+  tags: {
+    type: [String],
+    default: [],
+  },
   description: {
     type: String,
     default: '',
@@ -68,10 +100,13 @@ const miniProductSchema = new mongoose.Schema({
   },
 });
 
-// Validation: max 5 media items
+// Validation: max 5 media items and 3 catalogues
 miniProductSchema.pre('save', function (next) {
   if (this.media && this.media.length > 5) {
     throw new Error('Maximum 5 media items allowed');
+  }
+  if (this.catalogs && this.catalogs.length > 3) {
+    throw new Error('Maximum 3 catalogues allowed');
   }
   next();
 });

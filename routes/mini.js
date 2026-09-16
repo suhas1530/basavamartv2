@@ -42,7 +42,10 @@ const { miniProductUpload } = require('../middleware/miniUpload');
 
 router.get('/admin/products', protectAdmin, getAdminProducts);
 router.post('/admin/products', protectAdmin, createProducts);
-router.post('/admin/products/:id/media', protectAdmin, miniProductUpload.array('media', 5), uploadProductMedia);
+router.post('/admin/products/:id/media', protectAdmin, miniProductUpload.fields([
+  { name: 'media', maxCount: 5 },
+  { name: 'catalogs', maxCount: 3 },
+]), uploadProductMedia);
 router.put('/admin/products/:id', protectAdmin, updateProduct);
 router.delete('/admin/products/:id', protectAdmin, deleteProduct);
 router.patch('/admin/products/:id/status', protectAdmin, updateProductStatus);

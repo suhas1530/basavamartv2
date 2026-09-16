@@ -503,7 +503,11 @@ function attachVariantImages(variants, files) {
     const existingImages = Array.isArray(v.images) ? v.images : [];
     const newFiles = (files || []).filter(f => f.fieldname === `variantImages_${idx}`);
     const newImages = newFiles.map(f => `/uploads/variants/${f.filename}`);
-    return { ...v, images: [...existingImages, ...newImages] };
+    const existingDocuments = Array.isArray(v.documents) ? v.documents : [];
+    const newDocuments = (files || [])
+      .filter(f => f.fieldname === `variantDocuments_${idx}`)
+      .map(f => ({ name: f.originalname, path: `/uploads/variants/${f.filename}` }));
+    return { ...v, images: [...existingImages, ...newImages], documents: [...existingDocuments, ...newDocuments] };
   });
 }
 
@@ -563,8 +567,7 @@ router.get('/member', protectMember, async (req, res) => {
       .populate('subcategory', 'name')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
-      .limit(Number(limit))
-      .select('-variants.finalPrice -variants.listPrice -variants.discountPercent -variants.profitPercent');
+      .limit(Number(limit));
 
     const total = await Product.countDocuments(query);
     res.json({ success: true, products, total, pages: Math.ceil(total / limit) });
@@ -698,6 +701,35 @@ router.post('/', protectAdmin, upload.any(), async (req, res) => {
     await Brand.findByIdAndUpdate(body.brandId, { $inc: { totalProducts: 1 } });
 
     const populated = await Product.findById(product._id)
+      .populate('brand', 'name logo')
+      .populate('category', 'name')
+      .populate('subcategory', 'name');
+
+    res.status(201).json({ success: true, product: populated });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// CLONE product
+router.post('/:id/clone', protectAdmin, async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id).lean();
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+
+    delete product._id;
+    delete product.createdAt;
+    delete product.updatedAt;
+    delete product.__v;
+    product.name = `${product.name} (Copy)`;
+    product.totalViews = 0;
+    product.totalOrders = 0;
+    product.totalRevenue = 0;
+
+    const clonedProduct = await Product.create(product);
+    await Brand.findByIdAndUpdate(clonedProduct.brand, { $inc: { totalProducts: 1 } });
+
+    const populated = await Product.findById(clonedProduct._id)
       .populate('brand', 'name logo')
       .populate('category', 'name')
       .populate('subcategory', 'name');

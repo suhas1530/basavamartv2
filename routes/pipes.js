@@ -484,6 +484,7 @@ function calculateVariantPricing(variant) {
   const basePrice = priceAfterDiscount + profitAmount;
   const gstAmount = (basePrice * gstPercent) / 100;
   const finalPrice = basePrice + gstAmount;
+  const finalDiscountPercent = weightedAmount > 0 ? ((weightedAmount - basePrice) / weightedAmount) * 100 : 0;
   return {
     ...variant,
     discountAmount: +discountAmount.toFixed(2),
@@ -491,6 +492,7 @@ function calculateVariantPricing(variant) {
     basePrice: +basePrice.toFixed(2),
     gstAmount: +gstAmount.toFixed(2),
     finalPrice: +finalPrice.toFixed(2),
+    finalDiscountPercent: +finalDiscountPercent.toFixed(2),
   };
 }
 
@@ -504,7 +506,10 @@ function attachVariantImages(variants, files) {
     const existingImages = Array.isArray(v.images) ? v.images : [];
     const newFiles = (files || []).filter(f => f.fieldname === `variantImages_${idx}`);
     const newImages = newFiles.map(f => `/uploads/pipeVariants/${f.filename}`);
-    return { ...v, images: [...existingImages, ...newImages] };
+    const existingDocuments = Array.isArray(v.documents) ? v.documents : [];
+    const newDocumentFiles = (files || []).filter(f => f.fieldname === `variantDocuments_${idx}`);
+    const newDocuments = newDocumentFiles.map(f => ({ name: f.originalname, path: `/uploads/pipeVariants/${f.filename}` }));
+    return { ...v, images: [...existingImages, ...newImages], documents: [...existingDocuments, ...newDocuments] };
   });
 }
 
@@ -564,8 +569,7 @@ router.get('/member', protectMember, async (req, res) => {
       .populate('subcategory', 'name')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
-      .limit(Number(limit))
-      .select('-variants.finalPrice -variants.listPrice -variants.discountPercent -variants.profitPercent');
+      .limit(Number(limit));
 
     const total = await Pipe.countDocuments(query);
     res.json({ success: true, pipes, total, pages: Math.ceil(total / limit) });
@@ -749,6 +753,34 @@ router.put('/:id', protectAdmin, upload.any(), async (req, res) => {
       .populate('subcategory', 'name');
 
     res.json({ success: true, pipe: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// CLONE pipe
+router.post('/:id/clone', protectAdmin, async (req, res) => {
+  try {
+    const pipe = await Pipe.findById(req.params.id).lean();
+    if (!pipe) return res.status(404).json({ success: false, message: 'Pipe not found' });
+
+    delete pipe._id;
+    delete pipe.createdAt;
+    delete pipe.updatedAt;
+    delete pipe.__v;
+    pipe.name = `${pipe.name} (Copy)`;
+    pipe.totalViews = 0;
+    pipe.totalOrders = 0;
+    pipe.totalRevenue = 0;
+
+    const clonedPipe = await Pipe.create(pipe);
+    await Brand.findByIdAndUpdate(clonedPipe.brand, { $inc: { totalPipes: 1 } });
+    const populated = await Pipe.findById(clonedPipe._id)
+      .populate('brand', 'name logo')
+      .populate('category', 'name')
+      .populate('subcategory', 'name');
+
+    res.status(201).json({ success: true, product: populated });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

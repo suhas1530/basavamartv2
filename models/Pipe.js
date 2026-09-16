@@ -85,12 +85,17 @@ const variantSchema = new mongoose.Schema({
   profitAmount: { type: Number, default: 0 },
   gstAmount: { type: Number, default: 0 },
   finalPrice: { type: Number, default: 0 },
+  finalDiscountPercent: { type: Number, default: 0 },
   // Packaging thresholds
   primaryThreshold: { type: Number, default: 0 },
+  primaryThresholdUnit: { type: String, default: 'pcs' },
   secondaryThreshold: { type: Number, default: 0 },
+  secondaryThresholdUnit: { type: String, default: 'pcs' },
   tertiaryThreshold: { type: Number, default: 0 },
+  tertiaryThresholdUnit: { type: String, default: 'pcs' },
   isActive: { type: Boolean, default: true },
   images: [{ type: String }], // per-variant image file paths
+  documents: [{ name: String, path: String }], // per-variant document file paths
 });
 
 const descriptionSchema = new mongoose.Schema({

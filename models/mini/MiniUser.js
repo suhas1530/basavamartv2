@@ -7,6 +7,11 @@ const miniUserSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  memberId: {
+    type: String,
+    default: '',
+    trim: true,
+  },
   name: {
     type: String,
     default: '',
