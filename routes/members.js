@@ -71,6 +71,49 @@ router.get('/admin/applications', protectAdmin, async (req, res) => {
   }
 });
 
+// ===== ADMIN: Manage membership applications =====
+router.put('/admin/applications/:applicationId', protectAdmin, async (req, res) => {
+  try {
+    const updates = {};
+    ['userName', 'userEmail', 'userPhone', 'businessName', 'gstNumber', 'address', 'phone'].forEach((field) => {
+      if (req.body[field] !== undefined) updates[field] = req.body[field];
+    });
+    const application = await MembershipApplication.findByIdAndUpdate(req.params.applicationId, updates, { new: true });
+    if (!application) return res.status(404).json({ success: false, message: 'Application not found' });
+    res.json({ success: true, application });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/admin/applications/:applicationId/status', protectAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['pending', 'on_hold'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid application status' });
+    }
+    const application = await MembershipApplication.findByIdAndUpdate(req.params.applicationId, { status }, { new: true });
+    if (!application) return res.status(404).json({ success: false, message: 'Application not found' });
+    await User.findByIdAndUpdate(application.user, { membershipStatus: 'pending' });
+    res.json({ success: true, application });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.delete('/admin/applications/:applicationId', protectAdmin, async (req, res) => {
+  try {
+    const application = await MembershipApplication.findByIdAndDelete(req.params.applicationId);
+    if (!application) return res.status(404).json({ success: false, message: 'Application not found' });
+    if (['pending', 'on_hold'].includes(application.status)) {
+      await User.findByIdAndUpdate(application.user, { membershipStatus: 'none' });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ===== ADMIN: Approve membership =====
 router.post('/admin/approve/:applicationId', protectAdmin, async (req, res) => {
   try {
@@ -89,6 +132,11 @@ router.post('/admin/approve/:applicationId', protectAdmin, async (req, res) => {
       email: application.userEmail,
       phone: application.userPhone,
       userId: application.user._id,
+      businessProfile: {
+        companyName: application.businessName || '',
+        gstNumber: application.gstNumber || '',
+        address: application.address || '',
+      },
     });
 
     // Update application
@@ -128,10 +176,15 @@ router.post('/admin/reject/:applicationId', protectAdmin, async (req, res) => {
 // ===== ADMIN: Get all members =====
 router.get('/admin/all', protectAdmin, async (req, res) => {
   try {
-    const { search, status, page = 1, limit = 20 } = req.query;
+    const { search, status, page = 1, limit = 20, name, reference1, reference2, gstNumber, companyName } = req.query;
     const query = {};
     if (status) query.status = status;
     if (search) query.$or = [{ name: { $regex: search, $options: 'i' } }, { memberId: { $regex: search, $options: 'i' } }];
+    if (name) query.name = { $regex: name, $options: 'i' };
+    if (reference1) query.reference1 = reference1;
+    if (reference2) query.reference2 = reference2;
+    if (gstNumber) query['businessProfile.gstNumber'] = { $regex: gstNumber, $options: 'i' };
+    if (companyName) query['businessProfile.companyName'] = { $regex: companyName, $options: 'i' };
     const members = await Member.find(query).select('-password').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(Number(limit));
     const total = await Member.countDocuments(query);
     res.json({ success: true, members, total, pages: Math.ceil(total / limit) });
@@ -140,10 +193,92 @@ router.get('/admin/all', protectAdmin, async (req, res) => {
   }
 });
 
-// ===== ADMIN: Create member directly =====
-router.post('/admin/create', protectAdmin, async (req, res) => {
+router.get('/admin/reference-options', protectAdmin, async (req, res) => {
   try {
-    const { memberId, name, email, phone, address, password } = req.body;
+    const reference1Options = await Member.distinct('reference1', { reference1: { $nin: ['', null] } });
+    const reference2Query = { reference2: { $nin: ['', null] } };
+    if (req.query.reference1) reference2Query.reference1 = req.query.reference1;
+    const reference2Options = await Member.distinct('reference2', reference2Query);
+    res.json({
+      success: true,
+      reference1Options: reference1Options.sort(),
+      reference2Options: reference2Options.sort(),
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ===== ADMIN: Update member =====
+router.put('/admin/:memberId', protectAdmin, upload.fields([
+  { name: 'companyLogo', maxCount: 1 },
+  { name: 'memberImage', maxCount: 1 },
+]), async (req, res) => {
+  try {
+    const member = await Member.findById(req.params.memberId);
+    if (!member) return res.status(404).json({ success: false, message: 'Member not found' });
+
+    const { memberId, name, email, phone, address, gstNumber, reference1, reference2, companyName } = req.body;
+    if (memberId !== undefined && memberId !== member.memberId) {
+      const existing = await Member.findOne({ memberId, _id: { $ne: member._id } });
+      if (existing) return res.status(400).json({ success: false, message: 'Member ID already exists' });
+      member.memberId = memberId;
+    }
+    if (name !== undefined) member.name = name;
+    if (email !== undefined) member.email = email;
+    if (phone !== undefined) member.phone = phone;
+    if (reference1 !== undefined) member.reference1 = reference1;
+    if (reference2 !== undefined) member.reference2 = reference2;
+    member.businessProfile = member.businessProfile || {};
+    if (address !== undefined) member.businessProfile.address = address;
+    if (gstNumber !== undefined) member.businessProfile.gstNumber = gstNumber;
+    if (companyName !== undefined) member.businessProfile.companyName = companyName;
+    if (req.files?.companyLogo) member.businessProfile.companyLogo = `/uploads/members/${req.files.companyLogo[0].filename}`;
+    if (req.files?.memberImage) member.memberImage = `/uploads/members/${req.files.memberImage[0].filename}`;
+
+    await member.save();
+    res.json({ success: true, member: await Member.findById(member._id).select('-password') });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/admin/:memberId/status', protectAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['active', 'suspended'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid member status' });
+    }
+    const member = await Member.findByIdAndUpdate(
+      req.params.memberId,
+      { status, isActive: status === 'active' },
+      { new: true }
+    ).select('-password');
+    if (!member) return res.status(404).json({ success: false, message: 'Member not found' });
+    res.json({ success: true, member });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.delete('/admin/:memberId', protectAdmin, async (req, res) => {
+  try {
+    const member = await Member.findByIdAndDelete(req.params.memberId);
+    if (!member) return res.status(404).json({ success: false, message: 'Member not found' });
+    if (member.userId) await User.findByIdAndUpdate(member.userId, { membershipStatus: 'none' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ===== ADMIN: Create member directly =====
+router.post('/admin/create', protectAdmin, upload.fields([
+  { name: 'companyLogo', maxCount: 1 },
+  { name: 'memberImage', maxCount: 1 },
+]), async (req, res) => {
+  try {
+    const { memberId, name, email, phone, address, gstNumber, companyName, reference1, reference2, password } = req.body;
 
     if (!name || !phone || !memberId || !password) {
       return res.status(400).json({ success: false, message: 'Name, phone, member ID and password are required' });
@@ -160,10 +295,16 @@ router.post('/admin/create', protectAdmin, async (req, res) => {
       name,
       email: email || '',
       phone,
+      reference1: reference1 || '',
+      reference2: reference2 || '',
+      memberImage: req.files?.memberImage ? `/uploads/members/${req.files.memberImage[0].filename}` : '',
       isActive: true,
       status: 'active',
       businessProfile: {
         address: address || '',
+        gstNumber: gstNumber || '',
+        companyName: companyName || '',
+        companyLogo: req.files?.companyLogo ? `/uploads/members/${req.files.companyLogo[0].filename}` : '',
       },
     });
 

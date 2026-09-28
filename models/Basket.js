@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 // Member Basket Item
 const basketItemSchema = new mongoose.Schema({
   member: { type: mongoose.Schema.Types.ObjectId, ref: 'Member', required: true },
+  site: { type: mongoose.Schema.Types.ObjectId, ref: 'Site', default: null },
+  paymentBatch: { type: mongoose.Schema.Types.ObjectId, ref: 'SiteBasketPayment', default: null },
   product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
   productSnapshot: {
     name: String,
@@ -81,6 +83,7 @@ memberNote: { type: String, default: '' },
 // Vendor model (for basket pricing)
 const vendorSchema = new mongoose.Schema({
   basketItem: { type: mongoose.Schema.Types.ObjectId, ref: 'BasketItem' },
+  miniRequest: { type: mongoose.Schema.Types.ObjectId, ref: 'MiniRequest' },
   formToken: { type: String, unique: true },
   vendorName: String,
   vendorEmail: String,

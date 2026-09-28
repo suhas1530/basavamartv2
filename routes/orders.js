@@ -4,6 +4,12 @@ const Order = require('../models/Order');
 const Product = require('../models/Product');
 const Brand = require('../models/Brand');
 const { protectUser, protectAdmin } = require('../middleware/auth');
+const paymentProofUpload = require('../middleware/paymentProofUpload');
+
+const parseFormValue = (value) => {
+  if (typeof value !== 'string') return value;
+  try { return JSON.parse(value); } catch { return value; }
+};
 
 // Package breakdown helper
 function calcPackageBreakdown(qty, variant) {
@@ -18,9 +24,20 @@ function calcPackageBreakdown(qty, variant) {
 }
 
 // CREATE order (after payment or pay-later)
-router.post('/', protectUser, async (req, res) => {
+router.post('/', protectUser, paymentProofUpload.single('paymentProof'), async (req, res) => {
   try {
-    const { items, billingAddress, shippingAddress, paymentMethod, razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
+    const items = parseFormValue(req.body.items);
+    const billingAddress = parseFormValue(req.body.billingAddress);
+    const shippingAddress = parseFormValue(req.body.shippingAddress);
+    const { paymentMethod, razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
+    const isBankTransfer = paymentMethod === 'bank_transfer';
+
+    if (!Array.isArray(items) || !items.length || !billingAddress || !shippingAddress) {
+      return res.status(400).json({ success: false, message: 'Order items and addresses are required' });
+    }
+    if (isBankTransfer && !req.file) {
+      return res.status(400).json({ success: false, message: 'Payment screenshot is required' });
+    }
 
     let subtotal = 0, totalDiscount = 0, totalGst = 0, totalAmount = 0;
     const processedItems = [];
@@ -66,6 +83,7 @@ router.post('/', protectUser, async (req, res) => {
     }
 
     const isPaid = paymentMethod === 'razorpay' && razorpayPaymentId;
+    const paymentSubmittedAt = isBankTransfer ? new Date() : undefined;
 
     const order = await Order.create({
       user: req.user._id,
@@ -84,6 +102,13 @@ router.post('/', protectUser, async (req, res) => {
       razorpayOrderId,
       razorpayPaymentId,
       razorpaySignature,
+      paymentProof: req.file ? {
+        url: `/uploads/payment-proofs/${req.file.filename}`,
+        originalName: req.file.originalname,
+        uploadedAt: paymentSubmittedAt,
+      } : undefined,
+      paymentSubmittedAt,
+      paymentReviewDeadline: paymentSubmittedAt ? new Date(paymentSubmittedAt.getTime() + 20 * 60 * 1000) : undefined,
       paidAt: isPaid ? new Date() : undefined,
       deliveryStatus: 'order_placed',
       deliveryUpdates: [{ status: 'order_placed', message: 'Order placed successfully', updatedAt: new Date() }],
@@ -145,10 +170,43 @@ router.get('/admin/all', protectAdmin, async (req, res) => {
   }
 });
 
+router.get('/admin/payment-verifications', protectAdmin, async (req, res) => {
+  try {
+    const orders = await Order.find({
+      paymentMethod: 'bank_transfer',
+      paymentStatus: 'pending',
+      'paymentProof.url': { $exists: true, $ne: '' },
+    }).sort({ paymentSubmittedAt: 1 });
+    res.json({ success: true, orders });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.get('/admin/:id', protectAdmin, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    res.json({ success: true, order });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.patch('/admin/:id/mark-paid', protectAdmin, async (req, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      paymentMethod: 'bank_transfer',
+      paymentStatus: 'pending',
+      'paymentProof.url': { $exists: true, $ne: '' },
+    });
+    if (!order) return res.status(404).json({ success: false, message: 'Pending payment verification not found' });
+
+    order.paymentStatus = 'paid';
+    order.paidAt = new Date();
+    order.paymentReviewDeadline = undefined;
+    await order.save();
     res.json({ success: true, order });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -165,6 +223,16 @@ router.put('/admin/:id/delivery', protectAdmin, async (req, res) => {
     };
     if (adminNote) update.adminNotes = adminNote;
     const order = await Order.findByIdAndUpdate(req.params.id, update, { new: true });
+    res.json({ success: true, order });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.get('/:id', protectUser, async (req, res) => {
+  try {
+    const order = await Order.findOne({ _id: req.params.id, user: req.user._id });
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
     res.json({ success: true, order });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

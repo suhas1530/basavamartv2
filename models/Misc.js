@@ -72,7 +72,7 @@ const membershipApplicationSchema = new mongoose.Schema({
   gstNumber: String,
   address: String,
   phone: String,
-  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  status: { type: String, enum: ['pending', 'on_hold', 'approved', 'rejected'], default: 'pending' },
   approvedMemberId: String,
   approvedPassword: String, // plain text before member creation, then cleared
   adminNote: String,

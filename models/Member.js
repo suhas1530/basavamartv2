@@ -7,6 +7,9 @@ const memberSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String },
   phone: { type: String },
+  reference1: { type: String, default: '' },
+  reference2: { type: String, default: '' },
+  memberImage: { type: String, default: '' },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // original user who applied
   status: { type: String, enum: ['active', 'suspended', 'inactive'], default: 'active' },
 

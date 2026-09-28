@@ -68,10 +68,13 @@ const {
   submitRequests,
   getAllRequests,
   updateRequestStatus,
+  createRequestVendorForm,
 } = require('../controllers/mini/requestController');
+const { miniRequestUpload } = require('../middleware/miniUpload');
 
 router.get('/admin/requests', protectAdmin, getAllRequests);
 router.patch('/admin/requests/:id/status', protectAdmin, updateRequestStatus);
+router.post('/admin/requests/:id/vendor-form', protectAdmin, createRequestVendorForm);
 
 // ========== MINI USER ROUTES (PROTECTED) ==========
 
@@ -130,6 +133,6 @@ router.post('/orders/:orderId/verify-payment', protectMiniUser, verifyPayment);
 // ========== PUBLIC ROUTES ==========
 
 // Request Sphere (public)
-router.post('/requests', submitRequests);
+router.post('/requests', miniRequestUpload.any(), submitRequests);
 
 module.exports = router;

@@ -11,8 +11,9 @@ const miniRequestSchema = new mongoose.Schema({
       url: String,
       type: {
         type: String,
-        enum: ['image', 'video'],
+        enum: ['image', 'video', 'document'],
       },
+      name: String,
     },
   ],
   note: {
@@ -50,10 +51,10 @@ const miniRequestSchema = new mongoose.Schema({
   },
 });
 
-// Validation: max 5 media items
+// Validation: max 10 media items
 miniRequestSchema.pre('save', function (next) {
-  if (this.media && this.media.length > 5) {
-    throw new Error('Maximum 5 media items allowed');
+  if (this.media && this.media.length > 10) {
+    throw new Error('Maximum 10 media items allowed');
   }
   next();
 });

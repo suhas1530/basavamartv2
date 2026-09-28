@@ -33,6 +33,10 @@ const protectMember = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded.role !== 'member') return res.status(401).json({ success: false, message: 'Not a member token' });
     req.member = await Member.findById(decoded.id).select('-password -__v');
+    if (!req.member) return res.status(401).json({ success: false, message: 'Member account not found' });
+    if (req.member.status !== 'active' || req.member.isActive === false) {
+      return res.status(403).json({ success: false, message: 'Member account is on hold' });
+    }
     next();
   } catch {
     res.status(401).json({ success: false, message: 'Token invalid or expired' });
