@@ -447,6 +447,7 @@
 //august 26
 
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const Product = require('../models/Product');
 const Brand = require('../models/Brand');
@@ -529,7 +530,13 @@ router.get('/', async (req, res) => {
         { subcategory: { $in: matchingSubcategories.map(item => item._id) } },
       ];
     }
-    if (brand) query.brand = brand;
+    if (brand) {
+      const brandIds = String(brand).split(',').filter(id => mongoose.Types.ObjectId.isValid(id));
+      if (brandIds.length !== String(brand).split(',').length) {
+        return res.status(400).json({ success: false, message: 'One or more brand IDs are invalid' });
+      }
+      query.brand = brandIds.length > 1 ? { $in: brandIds } : brandIds[0];
+    }
     if (category) query.category = category;
     if (subcategory) query.subcategory = subcategory;
     if (accessLevel) query.accessLevel = { $in: [accessLevel, 'both'] };
@@ -569,6 +576,36 @@ router.get('/member', protectMember, async (req, res) => {
       .skip((page - 1) * limit)
       .limit(Number(limit));
 
+    const total = await Product.countDocuments(query);
+    res.json({ success: true, products, total, pages: Math.ceil(total / limit) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Admin routes with fixed paths must be registered before GET /:id below.
+router.get('/admin/all', protectAdmin, async (req, res) => {
+  try {
+    const { search, brand, category, subcategory, status, startDate, endDate, page = 1, limit = 20 } = req.query;
+    const query = {};
+    if (search) query.$text = { $search: search };
+    if (brand) query.brand = brand;
+    if (category) query.category = category;
+    if (subcategory) query.subcategory = subcategory;
+    if (status) query.status = status;
+    if (req.query.accessLevel) query.accessLevel = req.query.accessLevel;
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate);
+    }
+    const products = await Product.find(query)
+      .populate('brand', 'name logo')
+      .populate('category', 'name')
+      .populate('subcategory', 'name')
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
     const total = await Product.countDocuments(query);
     res.json({ success: true, products, total, pages: Math.ceil(total / limit) });
   } catch (err) {
@@ -622,38 +659,6 @@ router.post('/:id/view', async (req, res) => {
 });
 
 // ====== ADMIN ROUTES ======
-
-// GET admin all products
-router.get('/admin/all', protectAdmin, async (req, res) => {
-  try {
-    const { search, brand, category, subcategory, status, startDate, endDate, page = 1, limit = 20 } = req.query;
-    const query = {};
-    if (search) query.$text = { $search: search };
-    if (brand) query.brand = brand;
-    if (category) query.category = category;
-    if (subcategory) query.subcategory = subcategory;
-    if (status) query.status = status;
-    if (req.query.accessLevel) {
-      query.accessLevel = req.query.accessLevel;
-    }
-    if (startDate || endDate) {
-      query.createdAt = {};
-      if (startDate) query.createdAt.$gte = new Date(startDate);
-      if (endDate) query.createdAt.$lte = new Date(endDate);
-    }
-    const products = await Product.find(query)
-      .populate('brand', 'name logo')
-      .populate('category', 'name')
-      .populate('subcategory', 'name')
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
-    const total = await Product.countDocuments(query);
-    res.json({ success: true, products, total, pages: Math.ceil(total / limit) });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
 
 // CREATE product
 router.post('/', protectAdmin, upload.any(), async (req, res) => {

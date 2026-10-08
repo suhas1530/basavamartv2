@@ -59,7 +59,7 @@ const createProducts = async (req, res) => {
     const createdProducts = [];
 
     for (const product of products) {
-      const { miniUserId, productName, brandName, categoryName, subCategoryName, hsnCode, accessLevel, descriptions, videoLinks, tags, description, unit, qty, price } = product;
+      const { miniUserId, productName, brandName, categoryName, subCategoryName, hsnCode, accessLevel, descriptions, videoLinks, tags, variants, description, unit, qty, price } = product;
 
       if (!productName || !price) {
         return res.status(400).json({
@@ -85,6 +85,7 @@ const createProducts = async (req, res) => {
         descriptions: parseArray(descriptions),
         videoLinks: parseArray(videoLinks),
         tags: parseArray(tags),
+        variants: parseArray(variants),
         unit: unit || 'piece',
         qty: qty || 0,
         price,
@@ -180,7 +181,7 @@ const uploadProductMedia = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { productName, brandName, categoryName, subCategoryName, hsnCode, accessLevel, descriptions, videoLinks, tags, description, unit, qty, price } = req.body;
+    const { productName, brandName, categoryName, subCategoryName, hsnCode, accessLevel, descriptions, videoLinks, tags, variants, description, unit, qty, price } = req.body;
 
     const updateData = {};
     if (productName !== undefined) updateData.productName = productName;
@@ -193,6 +194,7 @@ const updateProduct = async (req, res) => {
     if (descriptions !== undefined) updateData.descriptions = parseArray(descriptions);
     if (videoLinks !== undefined) updateData.videoLinks = parseArray(videoLinks);
     if (tags !== undefined) updateData.tags = parseArray(tags);
+    if (variants !== undefined) updateData.variants = parseArray(variants);
     if (unit !== undefined) updateData.unit = unit;
     if (qty !== undefined) updateData.qty = qty;
     if (price !== undefined) updateData.price = price;
